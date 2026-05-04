@@ -78,6 +78,7 @@ app.use(sanitizeInput);
 
 // Health check
 app.get('/api/health', (req, res) => {
+  console.log(`[PING] Health check received at ${new Date().toLocaleTimeString()}`);
   res.json({ status: 'ok', message: 'MSEC ERP Server is running', timestamp: new Date().toISOString() });
 });
 
