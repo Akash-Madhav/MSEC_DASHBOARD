@@ -119,7 +119,7 @@ function App() {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <Router>
+            <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <AuthProvider>
                     <AppRoutes />
                 </AuthProvider>
