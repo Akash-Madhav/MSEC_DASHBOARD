@@ -1,3 +1,4 @@
+import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
@@ -139,11 +140,27 @@ app.use('/api', (req, res) => {
 
 // Serve frontend static files for offline/combined deployments
 const clientDistPath = path.join(__dirname, '../../client/dist');
-app.use(express.static(clientDistPath));
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(clientDistPath, 'index.html'));
-});
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+} else {
+  // Fallback for API-only deployments (when frontend is on Vercel)
+  app.get('/', (req, res) => {
+    res.send(`
+      <html>
+        <body style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #F2EAF7; color: #4A154B;">
+          <div style="text-align: center; padding: 2rem; background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h1>🚀 MSEC ERP API is running!</h1>
+            <p>The backend is successfully deployed and active.</p>
+            <p style="font-size: 0.8rem; color: #666; margin-top: 1rem;">Frontend is deployed separately.</p>
+          </div>
+        </body>
+      </html>
+    `);
+  });
+}
 
 // Start server
 app.listen(PORT, () => {
