@@ -16,10 +16,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Parse allowed origins from env (comma-separated for multiple origins)
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
-  .split(',')
-  .map(url => url.trim());
+// Parse allowed origins from env dynamically
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+].filter(Boolean) // Remove undefined/null
+ .flatMap(url => url.split(',').map(u => u.trim()));
 
 // Security headers via Helmet
 app.use(helmet({
