@@ -81,6 +81,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Apply XSS sanitization globally
 app.use(sanitizeInput);
 
+// Root route
+app.get('/', (req, res) => {
+  res.send(`
+    <html>
+      <body style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #F2EAF7; color: #4A154B;">
+        <div style="text-align: center; padding: 2rem; background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <h1>🚀 MSEC ERP API is running!</h1>
+          <p>The backend is successfully deployed and active.</p>
+          <p>Frontend URL: <a href="${allowedOrigins[0]}">${allowedOrigins[0]}</a></p>
+        </div>
+      </body>
+    </html>
+  `);
+});
+
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
