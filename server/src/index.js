@@ -8,6 +8,7 @@ import { sanitizeInput } from './middleware/validation.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import studentRoutes from './routes/student.routes.js';
+import prisma from './utils/prisma.js';
 
 dotenv.config();
 
@@ -77,9 +78,16 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(sanitizeInput);
 
 // Health check
-app.get('/api/health', (req, res) => {
-  console.log(`[PING] Health check received at ${new Date().toLocaleTimeString()}`);
-  res.json({ status: 'ok', message: 'MSEC ERP Server is running', timestamp: new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+  try {
+    // Ping DB to keep Neon Serverless connection active
+    await prisma.$queryRaw`SELECT 1`;
+    console.log(`[PING] Health check received at ${new Date().toLocaleTimeString()}`);
+    res.json({ status: 'ok', message: 'MSEC ERP Server is running', db: 'connected', timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('[PING] Database connection failed:', error.message);
+    res.status(500).json({ status: 'error', message: 'Database connection failed' });
+  }
 });
 
 // Routes
