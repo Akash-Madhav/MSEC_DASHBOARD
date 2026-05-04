@@ -4,6 +4,8 @@ import compression from 'compression';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { sanitizeInput } from './middleware/validation.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
@@ -11,6 +13,9 @@ import studentRoutes from './routes/student.routes.js';
 import prisma from './utils/prisma.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -55,10 +60,20 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
+    
+    const cleanOrigin = origin.replace(/\/$/, '');
+    const cleanAllowedOrigins = allowedOrigins.map(url => url.replace(/\/$/, ''));
+    
+    if (cleanAllowedOrigins.includes(cleanOrigin)) {
       return callback(null, true);
     }
-    return callback(new Error('Not allowed by CORS'));
+    
+    // Dynamically allow any Vercel preview deployments to prevent CORS errors on new builds
+    if (cleanOrigin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    
+    return callback(new Error('Not allowed by CORS: ' + origin));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -81,20 +96,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Apply XSS sanitization globally
 app.use(sanitizeInput);
 
-// Root route
-app.get('/', (req, res) => {
-  res.send(`
-    <html>
-      <body style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #F2EAF7; color: #4A154B;">
-        <div style="text-align: center; padding: 2rem; background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <h1>🚀 MSEC ERP API is running!</h1>
-          <p>The backend is successfully deployed and active.</p>
-          <p>Frontend URL: <a href="${allowedOrigins[0]}">${allowedOrigins[0]}</a></p>
-        </div>
-      </body>
-    </html>
-  `);
-});
+
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -130,9 +132,17 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ success: false, message: 'Route not found' });
+// 404 handler for API routes
+app.use('/api', (req, res) => {
+  res.status(404).json({ success: false, message: 'API Route not found' });
+});
+
+// Serve frontend static files for offline/combined deployments
+const clientDistPath = path.join(__dirname, '../../client/dist');
+app.use(express.static(clientDistPath));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
 // Start server
